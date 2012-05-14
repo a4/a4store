@@ -11,7 +11,7 @@ using a4::store::Storable;
 #include <a4/root_object_store.h>
 using a4::store::RootObjectStore;
 using a4::store::ObjectStore;
-using a4::store::RTH1;
+using a4::store::RTH1D;
 
 class Test : public Storable {
 public:
@@ -31,7 +31,7 @@ int main(int argc, char* argv[]) {
     ObjectStore S = backstore.store();
     
     for (int i = 0; i < 100; i++ ) {
-        S.T<RTH1>("test/test/blah")(100, 0., 100.).fill(100);
+        S.T<RTH1D>("test/test/blah")(100, 0., 100.).fill(100);
     }
     
     TFile f("test.root", "recreate");

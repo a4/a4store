@@ -8,10 +8,15 @@
 
 #include <iostream>
 #include <string>
+#include <utility>
 
 #include <TFile.h>
 #include <TDirectory.h>
 #include <TH1D.h>
+#include <TH2D.h>
+#include <TH3D.h>
+#include <TAxis.h>
+
 
 #include <a4/storable.h>
 #include <a4/object_store.h>
@@ -51,19 +56,20 @@ public:
     ROOT_TYPE root_object;
     
     TObject* get_tobject() { return &root_object; }
-    
-    void constructor(const char* title) {
+
+
+    virtual void constructor(const char* title) {
         _initializations_remaining++;
         root_object.SetTitle(title);
     }
-    void constructor(const uint32_t bins, const double min, const double max, const char* label="") {
-      abort();
+    virtual void constructor(const uint32_t bins, const double min, const double max, const char* label="") {
+      FATAL("Constructor not implemented");
     }
-    void constructor(const std::vector<double>& bins, const char* label="") {
-        abort();
+    virtual void constructor(const std::vector<double>& bins, const char* label="") {
+      FATAL("Constructor not implemented");
     }
     
-    template <typename... Args> Template<class ROOT_TYPE, int DIMENSION>his& operator()(const Args&... args) {
+    template <typename... Args> This& operator()(const Args&... args) {
         if (_initializations_remaining != 0) {
             _initializations_remaining--;
             static_cast<This*>(this)->constructor(args...);
@@ -74,31 +80,109 @@ public:
     int _initializations_remaining;
     bool _initialized() const { return _initializations_remaining == 0; }
     
-    void fill(double v, double w=1) {
-      abort();
-        root_object.Fill(v, w);
+    virtual void fill(double v, double w=1) {
+      FATAL("Fill not implemented");
     }
 };
 
   typedef SpecificRootStorable<TH1D> RTH1;
 
-template<class ROOT_TYPE, int DIMENSION>
+template<class ROOT_TYPE, int DIMENSIONS>
 class StorableRootHist : public SpecificRootStorable<ROOT_TYPE> {
 public:
 
-  StorableRootHist() {this->_initializations_remaining = DIMENSION;}
+  StorableRootHist() {this->_initializations_remaining = DIMENSIONS;}
 
-  void constructor(const uint32_t bins, const double min, const double max, const char* label="") {
-    this->root_object.SetBins(bins, min, max);
+
+  void constructor(const std::vector<double>& bins, const char* label="") {
+    TAxis* current_axis(0);
+    int n_cells(0);
+
+    unsigned int nbins(bins.size()-1);
+    assert(nbins > 0);
+
+    // Set the correct axis/cells based on the number of dimensions and itrerations remaining
+    if (this->_initializations_remaining == DIMENSIONS - 3) {    
+      current_axis = this->root_object.GetZaxis();
+      n_cells = (nbins + 2) * (this->root_object.GetNbinsY() + 2) * (this->root_object.GetNbinsX() + 2); 
+    } else if (this->_initializations_remaining == DIMENSIONS - 2) {
+      current_axis = this->root_object.GetYaxis();
+      n_cells = (nbins + 2) * (this->root_object.GetNbinsX() + 2); 
+    } else if (this->_initializations_remaining == DIMENSIONS - 1) {
+      current_axis = this->root_object.GetXaxis();
+      n_cells = nbins + 2;
+    }
+
+    // Init the current axis 
+    current_axis->SetRange(0,0);
+    current_axis->Set(nbins, &bins[0]);
+    current_axis->SetTitle(label);
+
+    // Update the histogram
+    this->root_object.SetBinsLength(n_cells);
+
+    if (this->root_object.GetSumw2N()) {
+      this->root_object.GetSumw2()->Set(n_cells);
+    }
+
     this->root_object.Reset();
   }
 
+  void constructor(const uint32_t bins, const double min, const double max, const char* label="") {
+    TAxis* current_axis(0);
+    int n_cells(0);
 
+    // Set the correct axis/cells based on the number of dimensions and itrerations remaining
+    if (this->_initializations_remaining == DIMENSIONS - 3) {    
+      current_axis = this->root_object.GetZaxis();
+      n_cells = (bins + 2) * (this->root_object.GetNbinsY() + 2) * (this->root_object.GetNbinsX() + 2); 
+    } else if (this->_initializations_remaining == DIMENSIONS - 2) {
+      current_axis = this->root_object.GetYaxis();
+      n_cells = (bins + 2) * (this->root_object.GetNbinsX() + 2); 
+    } else if (this->_initializations_remaining == DIMENSIONS - 1) {
+      current_axis = this->root_object.GetXaxis();
+      n_cells = bins + 2;
+    }
+
+    // Init the current axis 
+    current_axis->SetRange(0,0);
+    current_axis->Set(bins, min, max);
+    current_axis->SetTitle(label);
+
+    // Update the histogram
+    this->root_object.SetBinsLength(n_cells);
+
+    if (this->root_object.GetSumw2N()) {
+      this->root_object.GetSumw2()->Set(n_cells);
+    }
+
+    this->root_object.Reset();
+  }
+
+  void fill(double x, double w=1) {
+    //FATAL("Fill not implemented");
+     assert(this->_initialized());
+     this->root_object.Fill(x, w);
+  }
   
 };
 
+// class RTH1D : public StorableRootHist<ROOT_TYPE, 1> {
+// public:
+//   
+//   RTH1D() {this->StorableRootHist();}
+// 
+//   void fill(double x, double w=1) {
+//     assert(this->_initialized());
+//     this->root_object.Fill(x, w);
+//   }
+// 
+// };
+
+
   typedef StorableRootHist<TH1D, 1> RTH1D;
-  typedef StorableRootHist<TH1D, 2> RTH2D;
+  typedef StorableRootHist<TH2D, 2> RTH2D;
+  typedef StorableRootHist<TH3D, 2> RTH3D;
 
 class RootObjectStore : public ObjectBackStore {
 public:
@@ -111,6 +195,23 @@ public:
         return d;
     }
     
+  static std::pair<std::string, std::string> path_and_name(const std::string& full) {
+    std::string::size_type idelim = full.find_last_of("/");
+
+    std::string path, name;
+
+    if (idelim == std::string::npos) {
+      path = "";
+      name = full;     
+    } else {
+      path = full.substr(0, idelim);      
+      name = full.substr(idelim+1);      
+    }
+
+    return std::make_pair(path, name);
+  }
+
+
   void write(std::string filename = "") {
         TDirectory* destination = gDirectory;
         
@@ -130,12 +231,9 @@ public:
                 continue;
             }
             
-            // TODO: apply basename/dirname, SetName();
-
-            TDirectory* d = mkdirs(destination, i->first);
-            d->WriteTObject(object->get_tobject());
-
-            //std::cout << "Would have written storable " << i->first << " ptr = " << i->second.get() << std::endl;
+	    std::pair<std::string, std::string> path = path_and_name(i->first);
+            TDirectory* d = mkdirs(destination, path.first);
+            d->WriteTObject(object->get_tobject(), path.second.c_str());
         }
         
     }
