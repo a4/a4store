@@ -4,7 +4,9 @@
 #ifdef HAVE_CERN_ROOT_SYSTEM
 
 #include <assert.h>
+#include <stdlib.h>
 
+#include <iostream>
 #include <string>
 
 #include <TFile.h>
@@ -55,14 +57,13 @@ public:
         root_object.SetTitle(title);
     }
     void constructor(const uint32_t bins, const double min, const double max, const char* label="") {
-        root_object.SetBins(bins, min, max);
-        root_object.Reset();
+      abort();
     }
     void constructor(const std::vector<double>& bins, const char* label="") {
         abort();
     }
     
-    template <typename... Args> This& operator()(const Args&... args) {
+    template <typename... Args> Template<class ROOT_TYPE, int DIMENSION>his& operator()(const Args&... args) {
         if (_initializations_remaining != 0) {
             _initializations_remaining--;
             static_cast<This*>(this)->constructor(args...);
@@ -74,11 +75,30 @@ public:
     bool _initialized() const { return _initializations_remaining == 0; }
     
     void fill(double v, double w=1) {
+      abort();
         root_object.Fill(v, w);
     }
 };
 
-typedef SpecificRootStorable<TH1D> RTH1;
+  typedef SpecificRootStorable<TH1D> RTH1;
+
+template<class ROOT_TYPE, int DIMENSION>
+class StorableRootHist : public SpecificRootStorable<ROOT_TYPE> {
+public:
+
+  StorableRootHist() {this->_initializations_remaining = DIMENSION;}
+
+  void constructor(const uint32_t bins, const double min, const double max, const char* label="") {
+    this->root_object.SetBins(bins, min, max);
+    this->root_object.Reset();
+  }
+
+
+  
+};
+
+  typedef StorableRootHist<TH1D, 1> RTH1D;
+  typedef StorableRootHist<TH1D, 2> RTH2D;
 
 class RootObjectStore : public ObjectBackStore {
 public:
@@ -91,9 +111,13 @@ public:
         return d;
     }
     
-    void write() {
+  void write(std::string filename = "") {
         TDirectory* destination = gDirectory;
         
+	if (!filename.empty()) {
+	  destination = new TFile(filename.c_str(), "RECREATE");
+	}
+
         assert(destination->IsWritable());
         
         for (std::map<std::string, shared<Storable> >::iterator i = _store->begin(); 
