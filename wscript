@@ -11,7 +11,6 @@ def configure(conf):
     conf.load('compiler_c compiler_cxx python')
     
     conf.env.append_value("CXXFLAGS", ["-std=c++0x", "-ggdb"])
-    conf.env.append_value("LDFLAGS", ["-Wl,--as-needed"])
     conf.env.append_value("RPATH", [conf.env.LIBDIR])
     
     conf.check_cfg(path="root-config", package="", uselib_store="CERN_ROOT_SYSTEM",
