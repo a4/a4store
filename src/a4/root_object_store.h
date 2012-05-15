@@ -32,10 +32,10 @@ public:
 
 // TODO: Figure out how different dimensionalities of histograms will work
 
-template<class ROOT_TYPE>
+template<class WRAPPER_TYPE, class ROOT_TYPE>
 class SpecificRootStorable : public RootStorable {
 public:
-    typedef SpecificRootStorable<ROOT_TYPE> This;
+    typedef WRAPPER_TYPE This;
 
     SpecificRootStorable() : _initializations_remaining(1) {}
 
@@ -79,14 +79,10 @@ public:
     
     int _initializations_remaining;
     bool _initialized() const { return _initializations_remaining == 0; }
-    
-    virtual void fill(double v, double w=1) {
-      FATAL("Fill not implemented");
-    }
 };
 
-template<class ROOT_TYPE>
-class StorableRootHist : public SpecificRootStorable<ROOT_TYPE> {
+template<class WRAPPER_TYPE, class ROOT_TYPE>
+class StorableRootHist : public SpecificRootStorable<WRAPPER_TYPE, ROOT_TYPE> {
 public:
 
   StorableRootHist() {
@@ -166,7 +162,7 @@ public:
   
 };
 
-class RTH1D : public StorableRootHist<TH1D> {
+class RTH1D : public StorableRootHist<RTH1D, TH1D> {
 public:
   
   void fill(double x, double w=1) {
@@ -176,7 +172,7 @@ public:
 
 };
 
-class RTH2D : public StorableRootHist<TH2D> {
+class RTH2D : public StorableRootHist<RTH2D, TH2D> {
 public:
   
   void fill(double x, double y, double w=1) {
@@ -186,7 +182,7 @@ public:
 
 };
 
-class RTH3D : public StorableRootHist<TH3D> {
+class RTH3D : public StorableRootHist<RTH3D, TH3D> {
 public:
   
   void fill(double x, double y, double z, double w=1) {
