@@ -85,8 +85,6 @@ public:
     }
 };
 
-  typedef SpecificRootStorable<TH1D> RTH1;
-
 template<class ROOT_TYPE, int DIMENSIONS>
 class StorableRootHist : public SpecificRootStorable<ROOT_TYPE> {
 public:
@@ -129,6 +127,8 @@ public:
   }
 
   void constructor(const uint32_t bins, const double min, const double max, const char* label="") {
+    // Should this just call the variable bin version?
+
     TAxis* current_axis(0);
     int n_cells(0);
 
@@ -158,31 +158,39 @@ public:
 
     this->root_object.Reset();
   }
-
-  void fill(double x, double w=1) {
-    //FATAL("Fill not implemented");
-     assert(this->_initialized());
-     this->root_object.Fill(x, w);
-  }
   
 };
 
-// class RTH1D : public StorableRootHist<ROOT_TYPE, 1> {
-// public:
-//   
-//   RTH1D() {this->StorableRootHist();}
-// 
-//   void fill(double x, double w=1) {
-//     assert(this->_initialized());
-//     this->root_object.Fill(x, w);
-//   }
-// 
-// };
+class RTH1D : public StorableRootHist<TH1D, 1> {
+public:
+  
+  void fill(double x, double w=1) {
+    assert(this->_initialized());
+    this->root_object.Fill(x, w);
+  }
 
+};
 
-  typedef StorableRootHist<TH1D, 1> RTH1D;
-  typedef StorableRootHist<TH2D, 2> RTH2D;
-  typedef StorableRootHist<TH3D, 2> RTH3D;
+class RTH2D : public StorableRootHist<TH2D, 2> {
+public:
+  
+  void fill(double x, double y, double w=1) {
+    assert(this->_initialized());
+    this->root_object.Fill(x, y, w);
+  }
+
+};
+
+class RTH3D : public StorableRootHist<TH3D, 3> {
+public:
+  
+  void fill(double x, double y, double z, double w=1) {
+    assert(this->_initialized());
+    this->root_object.Fill(x, y, z, w);
+  }
+
+};
+
 
 class RootObjectStore : public ObjectBackStore {
 public:
