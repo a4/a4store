@@ -85,12 +85,13 @@ public:
     }
 };
 
-template<class ROOT_TYPE, int DIMENSIONS>
+template<class ROOT_TYPE>
 class StorableRootHist : public SpecificRootStorable<ROOT_TYPE> {
 public:
 
-  StorableRootHist() {this->_initializations_remaining = DIMENSIONS;}
-
+  StorableRootHist() {
+    this->_initializations_remaining = this->root_object.GetDimension();
+  }
 
   void constructor(const std::vector<double>& bins, const char* label="") {
     TAxis* current_axis(0);
@@ -98,15 +99,17 @@ public:
 
     unsigned int nbins(bins.size()-1);
     assert(nbins > 0);
+    
+    const int dim = this->root_object.GetDimension();
 
     // Set the correct axis/cells based on the number of dimensions and itrerations remaining
-    if (this->_initializations_remaining == DIMENSIONS - 3) {    
+    if (this->_initializations_remaining == dim - 3) {    
       current_axis = this->root_object.GetZaxis();
       n_cells = (nbins + 2) * (this->root_object.GetNbinsY() + 2) * (this->root_object.GetNbinsX() + 2); 
-    } else if (this->_initializations_remaining == DIMENSIONS - 2) {
+    } else if (this->_initializations_remaining == dim - 2) {
       current_axis = this->root_object.GetYaxis();
       n_cells = (nbins + 2) * (this->root_object.GetNbinsX() + 2); 
-    } else if (this->_initializations_remaining == DIMENSIONS - 1) {
+    } else if (this->_initializations_remaining == dim - 1) {
       current_axis = this->root_object.GetXaxis();
       n_cells = nbins + 2;
     }
@@ -131,15 +134,17 @@ public:
 
     TAxis* current_axis(0);
     int n_cells(0);
+    
+    const int dim = this->root_object.GetDimension();
 
     // Set the correct axis/cells based on the number of dimensions and itrerations remaining
-    if (this->_initializations_remaining == DIMENSIONS - 3) {    
+    if (this->_initializations_remaining == dim - 3) {    
       current_axis = this->root_object.GetZaxis();
       n_cells = (bins + 2) * (this->root_object.GetNbinsY() + 2) * (this->root_object.GetNbinsX() + 2); 
-    } else if (this->_initializations_remaining == DIMENSIONS - 2) {
+    } else if (this->_initializations_remaining == dim - 2) {
       current_axis = this->root_object.GetYaxis();
       n_cells = (bins + 2) * (this->root_object.GetNbinsX() + 2); 
-    } else if (this->_initializations_remaining == DIMENSIONS - 1) {
+    } else if (this->_initializations_remaining == dim - 1) {
       current_axis = this->root_object.GetXaxis();
       n_cells = bins + 2;
     }
@@ -161,7 +166,7 @@ public:
   
 };
 
-class RTH1D : public StorableRootHist<TH1D, 1> {
+class RTH1D : public StorableRootHist<TH1D> {
 public:
   
   void fill(double x, double w=1) {
@@ -171,7 +176,7 @@ public:
 
 };
 
-class RTH2D : public StorableRootHist<TH2D, 2> {
+class RTH2D : public StorableRootHist<TH2D> {
 public:
   
   void fill(double x, double y, double w=1) {
@@ -181,7 +186,7 @@ public:
 
 };
 
-class RTH3D : public StorableRootHist<TH3D, 3> {
+class RTH3D : public StorableRootHist<TH3D> {
 public:
   
   void fill(double x, double y, double z, double w=1) {
