@@ -30,8 +30,6 @@ public:
 };
 
 
-// TODO: Figure out how different dimensionalities of histograms will work
-
 template<class WRAPPER_TYPE, class ROOT_TYPE>
 class SpecificRootStorable : public RootStorable {
 public:
@@ -85,156 +83,156 @@ template<class WRAPPER_TYPE, class ROOT_TYPE>
 class StorableRootHist : public SpecificRootStorable<WRAPPER_TYPE, ROOT_TYPE> {
 public:
 
-  StorableRootHist() {
-    this->_initializations_remaining = this->root_object.GetDimension();
-  }
-
-  void constructor(const std::vector<double>& bins, const char* label="") {
-    TAxis* current_axis(0);
-    int n_cells(0);
-
-    unsigned int nbins(bins.size()-1);
-    assert(nbins > 0);
+    StorableRootHist() {
+      this->_initializations_remaining = this->root_object.GetDimension();
+    }
     
-    const int dim = this->root_object.GetDimension();
+    void constructor(const std::vector<double>& bins, const char* label="") {
+      TAxis* current_axis(0);
+      int n_cells(0);
+      
+      unsigned int nbins(bins.size()-1);
+      assert(nbins > 0);
+      
+      const int dim = this->root_object.GetDimension();
+      
+      // Set the correct axis/cells based on the number of dimensions and itrerations remaining
+      if (this->_initializations_remaining == dim - 3) {    
+	current_axis = this->root_object.GetZaxis();
+	n_cells = (nbins + 2) * (this->root_object.GetNbinsY() + 2) * (this->root_object.GetNbinsX() + 2); 
+      } else if (this->_initializations_remaining == dim - 2) {
+	current_axis = this->root_object.GetYaxis();
+	n_cells = (nbins + 2) * (this->root_object.GetNbinsX() + 2); 
+      } else if (this->_initializations_remaining == dim - 1) {
+	current_axis = this->root_object.GetXaxis();
+	n_cells = nbins + 2;
+      }
+      
+      // Init the current axis 
+      current_axis->SetRange(0,0);
+      current_axis->Set(nbins, &bins[0]);
+      current_axis->SetTitle(label);
 
-    // Set the correct axis/cells based on the number of dimensions and itrerations remaining
-    if (this->_initializations_remaining == dim - 3) {    
-      current_axis = this->root_object.GetZaxis();
-      n_cells = (nbins + 2) * (this->root_object.GetNbinsY() + 2) * (this->root_object.GetNbinsX() + 2); 
-    } else if (this->_initializations_remaining == dim - 2) {
-      current_axis = this->root_object.GetYaxis();
-      n_cells = (nbins + 2) * (this->root_object.GetNbinsX() + 2); 
-    } else if (this->_initializations_remaining == dim - 1) {
-      current_axis = this->root_object.GetXaxis();
-      n_cells = nbins + 2;
+      // Update the histogram
+      this->root_object.SetBinsLength(n_cells);
+      
+      if (this->root_object.GetSumw2N()) {
+	this->root_object.GetSumw2()->Set(n_cells);
+      }
+      
+      this->root_object.Reset();
     }
-
-    // Init the current axis 
-    current_axis->SetRange(0,0);
-    current_axis->Set(nbins, &bins[0]);
-    current_axis->SetTitle(label);
-
-    // Update the histogram
-    this->root_object.SetBinsLength(n_cells);
-
-    if (this->root_object.GetSumw2N()) {
-      this->root_object.GetSumw2()->Set(n_cells);
-    }
-
-    this->root_object.Reset();
-  }
-
-  void constructor(const uint32_t bins, const double min, const double max, const char* label="") {
-    // Should this just call the variable bin version?
-
-    TAxis* current_axis(0);
-    int n_cells(0);
     
-    const int dim = this->root_object.GetDimension();
-
-    // Set the correct axis/cells based on the number of dimensions and itrerations remaining
-    if (this->_initializations_remaining == dim - 3) {    
-      current_axis = this->root_object.GetZaxis();
-      n_cells = (bins + 2) * (this->root_object.GetNbinsY() + 2) * (this->root_object.GetNbinsX() + 2); 
-    } else if (this->_initializations_remaining == dim - 2) {
-      current_axis = this->root_object.GetYaxis();
-      n_cells = (bins + 2) * (this->root_object.GetNbinsX() + 2); 
-    } else if (this->_initializations_remaining == dim - 1) {
-      current_axis = this->root_object.GetXaxis();
-      n_cells = bins + 2;
+    void constructor(const uint32_t bins, const double min, const double max, const char* label="") {
+      // Should this just call the variable bin version?
+      
+      TAxis* current_axis(0);
+      int n_cells(0);
+      
+      const int dim = this->root_object.GetDimension();
+      
+      // Set the correct axis/cells based on the number of dimensions and itrerations remaining
+      if (this->_initializations_remaining == dim - 3) {    
+	current_axis = this->root_object.GetZaxis();
+	n_cells = (bins + 2) * (this->root_object.GetNbinsY() + 2) * (this->root_object.GetNbinsX() + 2); 
+      } else if (this->_initializations_remaining == dim - 2) {
+	current_axis = this->root_object.GetYaxis();
+	n_cells = (bins + 2) * (this->root_object.GetNbinsX() + 2); 
+      } else if (this->_initializations_remaining == dim - 1) {
+	current_axis = this->root_object.GetXaxis();
+	n_cells = bins + 2;
+      }
+      
+      // Init the current axis 
+      current_axis->SetRange(0,0);
+      current_axis->Set(bins, min, max);
+      current_axis->SetTitle(label);
+      
+      // Update the histogram
+      this->root_object.SetBinsLength(n_cells);
+      
+      if (this->root_object.GetSumw2N()) {
+	this->root_object.GetSumw2()->Set(n_cells);
+      }
+      
+      this->root_object.Reset();
     }
-
-    // Init the current axis 
-    current_axis->SetRange(0,0);
-    current_axis->Set(bins, min, max);
-    current_axis->SetTitle(label);
-
-    // Update the histogram
-    this->root_object.SetBinsLength(n_cells);
-
-    if (this->root_object.GetSumw2N()) {
-      this->root_object.GetSumw2()->Set(n_cells);
-    }
-
-    this->root_object.Reset();
-  }
-  
-};
-
+    
+  };
+ 
 class RTH1D : public StorableRootHist<RTH1D, TH1D> {
-public:
-  
-  void fill(double x, double w=1) {
-    assert(this->_initialized());
-    this->root_object.Fill(x, w);
-  }
-
+  public:
+    
+    void fill(double x, double w=1) {
+	assert(this->_initialized());
+	this->root_object.Fill(x, w);
+    }
+    
 };
-
+    
 class RTH2D : public StorableRootHist<RTH2D, TH2D> {
 public:
-  
-  void fill(double x, double y, double w=1) {
-    assert(this->_initialized());
-    this->root_object.Fill(x, y, w);
-  }
-
+    
+    void fill(double x, double y, double w=1) {
+	assert(this->_initialized());
+	this->root_object.Fill(x, y, w);
+    }
+    
 };
-
+    
 class RTH3D : public StorableRootHist<RTH3D, TH3D> {
 public:
   
-  void fill(double x, double y, double z, double w=1) {
-    assert(this->_initialized());
-    this->root_object.Fill(x, y, z, w);
-  }
-
-};
-
-
-class RootObjectStore : public ObjectBackStore {
-public:
-
-    static TDirectory* mkdirs(TDirectory* start, const std::string& file) {
-        if (!start->GetDirectory(file.c_str()))
-            start->mkdir(file.c_str());
-        TDirectory* d = start->GetDirectory(file.c_str());
-        d->cd();
-        return d;
+    void fill(double x, double y, double z, double w=1) {
+	assert(this->_initialized());
+	this->root_object.Fill(x, y, z, w);
     }
     
-  static std::pair<std::string, std::string> path_and_name(const std::string& full) {
-    std::string::size_type idelim = full.find_last_of("/");
-
-    std::string path, name;
-
-    if (idelim == std::string::npos) {
-      path = "";
-      name = full;     
-    } else {
-      path = full.substr(0, idelim);      
-      name = full.substr(idelim+1);      
+};
+    
+    
+class RootObjectStore : public ObjectBackStore {
+public:
+  
+    static TDirectory* mkdirs(TDirectory* start, const std::string& file) {
+	if (!start->GetDirectory(file.c_str()))
+	    start->mkdir(file.c_str());
+	TDirectory* d = start->GetDirectory(file.c_str());
+	d->cd();
+	return d;
     }
-
-    return std::make_pair(path, name);
-  }
-
-
-  void write(std::string filename = "") {
+    
+    static std::pair<std::string, std::string> path_and_name(const std::string& full) {
+	std::string::size_type idelim = full.find_last_of("/");
+	
+	std::string path, name;
+	
+	if (idelim == std::string::npos) {
+	    path = "";
+	    name = full;     
+	} else {
+	    path = full.substr(0, idelim);      
+	    name = full.substr(idelim+1);      
+	}
+	
+	return std::make_pair(path, name);
+    }
+    
+    
+    void write(std::string filename = "") {
         TDirectory* destination = gDirectory;
         
 	if (!filename.empty()) {
-	  destination = new TFile(filename.c_str(), "RECREATE");
+	    destination = new TFile(filename.c_str(), "RECREATE");
 	}
-
+	
         assert(destination->IsWritable());
         
         for (std::map<std::string, shared<Storable> >::iterator i = _store->begin(); 
-            i != _store->end(); i++) {
-
+	     i != _store->end(); i++) {
+	    
             RootStorable* object = dynamic_cast<RootStorable*>(i->second.get());
-
+	    
             if (!object) {
                 std::cout << "Non-RootStorable object: " << i->first << std::endl;
                 continue;
@@ -251,7 +249,7 @@ public:
 
 }
 }
-    
+
 #endif // HAVE_CERN_ROOT_SYSTEM
 
 #endif // _A4_STORE_ROOT_OBJECT_STORE_H_
